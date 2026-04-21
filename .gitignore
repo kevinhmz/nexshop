@@ -5,3 +5,4 @@ env/*
 
 /generated/prisma
 src/generated
+.env
