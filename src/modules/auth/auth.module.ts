@@ -7,10 +7,15 @@ import {
   LoginUseCase,
   RegisterUseCase,
 } from "@modules/auth/application/use-cases";
+import { TOKEN_SERVICE } from "./domain/ports/token.service";
+import { JwtTokenService } from "./infrastructure/adapters/jwt-token.service";
+import { PassportModule } from "@nestjs/passport";
+import { JwtStrategy } from "./infrastructure/adapters/jwt.strategy";
 
 @Module({
   imports: [
     UsersModule,
+    PassportModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -20,6 +25,14 @@ import {
     }),
   ],
   controllers: [AuthController],
-  providers: [RegisterUseCase, LoginUseCase],
+  providers: [
+    RegisterUseCase,
+    LoginUseCase,
+    JwtStrategy,
+    {
+      provide: TOKEN_SERVICE,
+      useClass: JwtTokenService,
+    },
+  ],
 })
 export class AuthModule {}

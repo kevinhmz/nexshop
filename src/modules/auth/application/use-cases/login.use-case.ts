@@ -1,5 +1,8 @@
+import {
+  TOKEN_SERVICE,
+  TokenService,
+} from "@modules/auth/domain/ports/token.service";
 import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
 import {
   USER_REPOSITORY,
@@ -11,7 +14,8 @@ export class LoginUseCase {
   constructor(
     @Inject(USER_REPOSITORY)
     private readonly userRepository: UserRepositoryPort,
-    private readonly jwtService: JwtService,
+    @Inject(TOKEN_SERVICE)
+    private readonly tokenService: TokenService,
   ) {}
 
   async execute(data: { email: string; password: string }) {
@@ -25,11 +29,10 @@ export class LoginUseCase {
       throw new UnauthorizedException("Invalid credentials");
     }
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
-
-    return {
-      accessToken: this.jwtService.sign(payload),
-      refreshToken: this.jwtService.sign(payload, { expiresIn: "7d" }),
-    };
+    return this.tokenService.generateTokens({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    });
   }
 }

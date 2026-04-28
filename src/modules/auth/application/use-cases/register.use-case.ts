@@ -1,3 +1,7 @@
+import {
+  TOKEN_SERVICE,
+  TokenService,
+} from "@modules/auth/domain/ports/token.service";
 import { Inject, Injectable, ConflictException } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
 import {
@@ -10,6 +14,8 @@ export class RegisterUseCase {
   constructor(
     @Inject(USER_REPOSITORY)
     private readonly userRepository: UserRepositoryPort,
+    @Inject(TOKEN_SERVICE)
+    private readonly tokenService: TokenService,
   ) {}
 
   async execute(data: { email: string; password: string; name: string }) {
@@ -27,6 +33,13 @@ export class RegisterUseCase {
     });
 
     const { password, ...result } = user;
-    return result;
+
+    const tokens = this.tokenService.generateTokens({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    return { user: result, ...tokens };
   }
 }
