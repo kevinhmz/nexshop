@@ -6,6 +6,7 @@ import { AuthModule } from "@modules/auth/auth.module";
 import { ConfigModule } from "@nestjs/config";
 import { PrismaModule } from "./prisma/prisma.module";
 import { CatalogModule } from "@modules/catalog/catalog.module";
+import { CartModule } from "@modules/cart/cart.module";
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { CatalogModule } from "@modules/catalog/catalog.module";
     UsersModule,
     AuthModule,
     CatalogModule,
+    CartModule,
   ],
   controllers: [AppController],
   providers: [AppService],
