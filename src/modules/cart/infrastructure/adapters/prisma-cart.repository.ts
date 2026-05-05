@@ -1,13 +1,15 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
-import { Cart } from "src/generated/prisma/client";
+import { Cart, Prisma } from "src/generated/prisma/client";
 import { CartRepository } from "@modules/cart/domain/ports";
 
 @Injectable()
 export class PrismaCartRepository implements CartRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByUserId(userId: string): Promise<Cart | null> {
+  async findByUserId(
+    userId: string,
+  ): Promise<Prisma.CartGetPayload<{ include: { items: true } }> | null> {
     return this.prisma.cart.findUnique({
       where: { userId },
       include: {

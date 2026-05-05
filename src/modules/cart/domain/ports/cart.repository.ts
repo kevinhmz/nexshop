@@ -1,7 +1,9 @@
-import { Cart } from "src/generated/prisma/client";
+import { Cart, Prisma } from "src/generated/prisma/client";
 
 export interface CartRepository {
-  findByUserId(userId: string): Promise<Cart | null>;
+  findByUserId(
+    userId: string,
+  ): Promise<Prisma.CartGetPayload<{ include: { items: true } }> | null>;
   addItem(userId: string, productId: string, quantity: number): Promise<Cart>;
   updateItemQuantity(
     userId: string,
