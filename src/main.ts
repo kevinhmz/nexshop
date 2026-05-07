@@ -4,7 +4,7 @@ import { Logger, ValidationPipe } from "@nestjs/common";
 import helmet from "helmet";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { ConfigService } from "@nestjs/config";
-import compression from "compression";
+import * as compression from "compression";
 
 const logger = new Logger("Bootstrap");
 
@@ -15,7 +15,11 @@ async function bootstrap() {
   // Security
   app.enable("trust proxy"); // útil para AWS / proxies
   app.use(helmet());
-  app.use(compression());
+  app.use(
+    compression({
+      threshold: 1024, // solo comprime > 1kb
+    }),
+  );
   // app.enableCors();
 
   // Validation
