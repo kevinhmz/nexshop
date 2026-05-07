@@ -1,0 +1,53 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build output
+dist
+build
+
+# Git
+.git
+.gitignore
+
+# Environment files / secrets
+.env
+.env.*
+env/.env
+env/.env.*
+env/*.env
+env/*.prod
+env/*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test / coverage
+coverage
+.nyc_output
+
+# Cache / temp
+.cache
+.tmp
+temp
+*.tsbuildinfo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode
+.idea
+
+# Docker local files
+docker-compose.yml
+docker-compose.*.yml
+
+# Misc
+README.md
