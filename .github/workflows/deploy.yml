@@ -1,103 +1,122 @@
-name: CI/CD
+name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
 
 jobs:
-  test:
-    name: Lint, Test & Build
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: nexshop
-          POSTGRES_PASSWORD: nexshop123
-          POSTGRES_DB: nexshop_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U nexshop -d nexshop_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      DATABASE_URL: postgresql://nexshop:nexshop123@localhost:5432/nexshop_test?schema=public
-      NODE_ENV: test
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.7.0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      - run: pnpm run prisma:generate
-
-      - run: pnpm run lint:check
-
-      - run: pnpm test
-
-      - run: pnpm run build:prod
-
-  build-and-push:
-    name: Build & Push Image
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  deploy:
+    name: Build, Push & Deploy
     runs-on: ubuntu-latest
 
     permissions:
       contents: read
       packages: write
 
-    outputs:
-      image: ${{ steps.image.outputs.IMAGE }}
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Nexshop repo
+        uses: actions/checkout@v4
 
-      - name: Get version from package.json
-        id: version
-        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-
-      - name: Get short SHA
-        id: sha
-        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-
-      - name: Set image name
-        id: image
+      - name: Set image metadata
+        id: meta
         run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
           IMAGE_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          IMAGE="${{ env.REGISTRY }}/${IMAGE_NAME}:${{ steps.sha.outputs.SHORT_SHA }}"
-          echo "IMAGE=${IMAGE}" >> $GITHUB_OUTPUT
-          echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+          IMAGE="${{ env.REGISTRY }}/${IMAGE_NAME}:${SHORT_SHA}"
 
-      - uses: docker/login-action@v3
+          echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "IMAGE=${IMAGE}" >> $GITHUB_OUTPUT
+
+      - name: Notify deployment started
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: "🚀 Nexshop deployment started"
+          SLACK_MESSAGE: |
+            Starting deployment to production
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Image: ${{ steps.meta.outputs.IMAGE }}
+            Author: ${{ github.actor }}
+          SLACK_COLOR: "#FFA500"
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/build-push-action@v6
+      - name: Build and push image
+        uses: docker/build-push-action@v6
         with:
           context: .
           target: production
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ steps.image.outputs.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
-            ${{ env.REGISTRY }}/${{ steps.image.outputs.IMAGE_NAME }}:${{ steps.sha.outputs.SHORT_SHA }}
-            ${{ env.REGISTRY }}/${{ steps.image.outputs.IMAGE_NAME }}:latest
+            ${{ steps.meta.outputs.IMAGE }}
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.IMAGE_NAME }}:latest
+
+      - name: Checkout Ansible repository
+        uses: actions/checkout@v4
+        with:
+          repository: kevinhmz/deployments
+          path: ansible-playbooks
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Run Ansible deploy playbook
+        uses: dawidd6/action-ansible-playbook@v2
+        with:
+          playbook: ansible-playbooks/playbooks/deploy-nexshop.yml
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          options: |
+            --inventory ansible-playbooks/inventory/hosts.yml
+            --extra-vars "image=${{ steps.meta.outputs.IMAGE }} app_repo_dir=${{ github.workspace }} app_dir=/opt/nexshop"
+            --ssh-common-args='-o StrictHostKeyChecking=no'
+
+      - name: Notify deployment success
+        if: success()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: "✅ Nexshop deployment successful"
+          SLACK_MESSAGE: |
+            Deployment completed successfully
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Image: ${{ steps.meta.outputs.IMAGE }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SLACK_COLOR: "#36a64f"
+
+      - name: Notify deployment failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: "❌ Nexshop deployment failed"
+          SLACK_MESSAGE: |
+            Deployment failed
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Image: ${{ steps.meta.outputs.IMAGE }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SLACK_COLOR: "#dc3545"
