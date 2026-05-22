@@ -89,7 +89,6 @@ jobs:
           options: |
             --inventory ansible-playbooks/inventory/hosts.yml
             --extra-vars "image=${{ steps.meta.outputs.IMAGE }} app_repo_dir=${{ github.workspace }} app_dir=/opt/nexshop"
-            --ssh-common-args='-o StrictHostKeyChecking=no'
 
       - name: Notify deployment success
         if: success()
