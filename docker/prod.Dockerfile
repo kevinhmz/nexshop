@@ -5,8 +5,6 @@ ENV PNPM_HOME=/usr/local/bin
 
 RUN corepack enable && corepack prepare pnpm@9.7.0 --activate
 
-RUN apk add --no-cache dumb-init openssl
-
 # Stage 2: Dependencies
 FROM base AS deps
 WORKDIR /app
@@ -32,6 +30,8 @@ RUN pnpm prune --prod
 
 # Stage 4: Production
 FROM node:22-alpine AS production
+
+RUN apk add --no-cache dumb-init openssl
 
 ENV NODE_ENV=production
 
