@@ -108,13 +108,13 @@ echo "Waiting for healthcheck: http://127.0.0.1:${NEW_PORT}${HEALTH_PATH}"
 
 HEALTH_OK="false"
 
-for i in $(seq 1 3); do
+for i in $(seq 1 30); do
   if curl -fsS "http://127.0.0.1:${NEW_PORT}${HEALTH_PATH}" > /dev/null; then
     HEALTH_OK="true"
     break
   fi
 
-  echo "Waiting... attempt $i/3"
+  echo "Waiting... attempt $i/30"
   sleep 2
 done
 
