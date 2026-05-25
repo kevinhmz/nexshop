@@ -8,7 +8,7 @@ COMPOSE_FILE="${APP_DIR}/docker-compose.prod.yml"
 DEPLOY_ENV="${APP_DIR}/.env.deploy"
 ACTIVE_PROXY_FILE="${APP_DIR}/nginx-active-proxy.conf"
 RUNTIME_ENV="${APP_DIR}/.env.runtime"
-HEALTH_PATH="${HEALTH_PATH:-/health}"
+HEALTH_PATH="${HEALTH_PATH:-/health/ready}"
 
 if [ -z "$NEW_IMAGE" ]; then
   echo "Usage: ./deploy.sh <full-image>"
@@ -108,13 +108,13 @@ echo "Waiting for healthcheck: http://127.0.0.1:${NEW_PORT}${HEALTH_PATH}"
 
 HEALTH_OK="false"
 
-for i in $(seq 1 30); do
+for i in $(seq 1 3); do
   if curl -fsS "http://127.0.0.1:${NEW_PORT}${HEALTH_PATH}" > /dev/null; then
     HEALTH_OK="true"
     break
   fi
 
-  echo "Waiting... attempt $i/30"
+  echo "Waiting... attempt $i/3"
   sleep 2
 done
 
