@@ -7,7 +7,7 @@ APP_DIR="/opt/nexshop"
 COMPOSE_FILE="${APP_DIR}/docker-compose.prod.yml"
 DEPLOY_ENV="${APP_DIR}/.env.deploy"
 ACTIVE_PROXY_FILE="${APP_DIR}/nginx-active-proxy.conf"
-
+RUNTIME_ENV="${APP_DIR}/.env.runtime"
 HEALTH_PATH="${HEALTH_PATH:-/health}"
 
 if [ -z "$NEW_IMAGE" ]; then
@@ -89,6 +89,17 @@ docker compose --env-file "$DEPLOY_ENV" -f "$COMPOSE_FILE" up -d db redis
 
 echo "Pulling new image for $NEW_SERVICE..."
 docker compose --env-file "$DEPLOY_ENV" -f "$COMPOSE_FILE" pull "$NEW_SERVICE"
+
+echo "Running migrations..."
+if ! docker compose \
+  --env-file "$DEPLOY_ENV" \
+  --env-file "$RUNTIME_ENV" \
+  -f "$COMPOSE_FILE" \
+  run --rm --no-deps "$NEW_SERVICE" npx prisma migrate deploy; then
+
+  echo "ERROR: Migration failed. Aborting deploy."
+  exit 1
+fi
 
 echo "Starting $NEW_SERVICE..."
 docker compose --env-file "$DEPLOY_ENV" -f "$COMPOSE_FILE" up -d --no-deps "$NEW_SERVICE"
