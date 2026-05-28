@@ -13,13 +13,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Build, Push & Deploy
+  build-and-push:
+    name: Build & Push Image
     runs-on: ubuntu-24.04-arm
 
     permissions:
       contents: read
       packages: write
+
+    outputs:
+      image: ${{ steps.img.outputs.image }}
 
     steps:
       - name: Checkout Nexshop repo
@@ -37,20 +40,6 @@ jobs:
       - name: Resolve primary image tag
         id: img
         run: echo "image=$(printf '%s' '${{ steps.meta.outputs.tags }}' | head -n1)" >> $GITHUB_OUTPUT
-
-      - name: Notify deployment started
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_TITLE: "🚀 Nexshop deployment started"
-          SLACK_MESSAGE: |
-            Starting deployment to production
-            Repository: ${{ github.repository }}
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            Image: ${{ steps.img.outputs.image }}
-            Author: ${{ github.actor }}
-          SLACK_COLOR: "#FFA500"
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -75,6 +64,32 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  deploy:
+    name: Deploy to VM
+    needs: build-and-push
+    runs-on: ubuntu-24.04-arm
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Nexshop repo
+        uses: actions/checkout@v4
+
+      - name: Notify deployment started
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_TITLE: "🚀 Nexshop deployment started"
+          SLACK_MESSAGE: |
+            Starting deployment to production
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Image: ${{ needs.build-and-push.outputs.image }}
+            Author: ${{ github.actor }}
+          SLACK_COLOR: "#FFA500"
+
       - name: Checkout Ansible repository
         uses: actions/checkout@v4
         with:
@@ -96,7 +111,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           options: |
             --inventory ansible-playbooks/inventory/hosts.yml
-            --extra-vars "image=${{ steps.img.outputs.image }} app_repo_dir=${{ github.workspace }} app_dir=/opt/nexshop"
+            --extra-vars "image=${{ needs.build-and-push.outputs.image }} app_repo_dir=${{ github.workspace }} app_dir=/opt/nexshop"
 
       - name: Notify deployment success
         if: success()
@@ -109,7 +124,7 @@ jobs:
             Repository: ${{ github.repository }}
             Branch: ${{ github.ref_name }}
             Commit: ${{ github.sha }}
-            Image: ${{ steps.img.outputs.image }}
+            Image: ${{ needs.build-and-push.outputs.image }}
             Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SLACK_COLOR: "#36a64f"
 
@@ -124,6 +139,6 @@ jobs:
             Repository: ${{ github.repository }}
             Branch: ${{ github.ref_name }}
             Commit: ${{ github.sha }}
-            Image: ${{ steps.img.outputs.image }}
+            Image: ${{ needs.build-and-push.outputs.image }}
             Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SLACK_COLOR: "#dc3545"

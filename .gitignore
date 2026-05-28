@@ -8,3 +8,4 @@ src/generated
 .env
 /generated/prisma
 dist
+/docs

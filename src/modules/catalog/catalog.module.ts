@@ -8,6 +8,10 @@ import {
 import { PrismaProductRepository } from "./infrastructure/adapters/prisma-product.repository";
 import { CATEGORY_REPOSITORY, PRODUCT_REPOSITORY } from "./domain/ports";
 import { PrismaCategoryRepository } from "./infrastructure/adapters/prisma-category.repository";
+import {
+  CachedProductRepository,
+  INNER_PRODUCT_REPOSITORY,
+} from "./infrastructure/adapters/cached-product.repository";
 
 @Module({
   controllers: [ProductsController, CategoriesController],
@@ -15,8 +19,12 @@ import { PrismaCategoryRepository } from "./infrastructure/adapters/prisma-categ
     CreateProductUseCase,
     ListProductsUseCase,
     {
-      provide: PRODUCT_REPOSITORY,
+      provide: INNER_PRODUCT_REPOSITORY,
       useClass: PrismaProductRepository,
+    },
+    {
+      provide: PRODUCT_REPOSITORY,
+      useClass: CachedProductRepository,
     },
     {
       provide: CATEGORY_REPOSITORY,
