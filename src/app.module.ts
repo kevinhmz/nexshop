@@ -10,12 +10,14 @@ import { CatalogModule } from "@modules/catalog/catalog.module";
 import { CartModule } from "@modules/cart/cart.module";
 import { OrdersModule } from "@modules/orders/orders.module";
 import { HealthModule } from "@modules/health/health.module";
+import { RedisModule } from "./shared/redis";
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     EventEmitterModule.forRoot(),
     PrismaModule,
+    RedisModule,
     UsersModule,
     AuthModule,
     CatalogModule,
