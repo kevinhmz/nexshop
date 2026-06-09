@@ -11,6 +11,7 @@ import { CartModule } from "@modules/cart/cart.module";
 import { OrdersModule } from "@modules/orders/orders.module";
 import { HealthModule } from "@modules/health/health.module";
 import { RedisModule } from "./shared/redis";
+import { PaymentsModule } from "@modules/payments/payments.module";
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { RedisModule } from "./shared/redis";
     CartModule,
     OrdersModule,
     HealthModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
