@@ -5,6 +5,7 @@ import helmet from "helmet";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { ConfigService } from "@nestjs/config";
 import * as compression from "compression";
+import { DomainExceptionFilter } from "./shared/filters/domain-exception.filter";
 
 const logger = new Logger("Bootstrap");
 
@@ -30,6 +31,8 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  app.useGlobalFilters(new DomainExceptionFilter());
 
   // Graceful shutdown
   app.enableShutdownHooks();
