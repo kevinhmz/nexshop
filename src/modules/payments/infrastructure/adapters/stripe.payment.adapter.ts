@@ -43,10 +43,10 @@ export class StripePaymentAdapter implements PaymentGatewayPort {
     } catch (err) {
       if (err instanceof Stripe.errors.StripeError) {
         this.logger.warn(`Stripe error: ${err.type} - ${err.message}`);
-        throw new PaymentError(err.message, err.code);
+        throw new PaymentError(err.message, "PAYMENT_REQUIRED", err.code);
       }
       this.logger.error("charge failed", err);
-      throw new PaymentError("charge failed");
+      throw new PaymentError("charge failed", "UPSTREAM");
     }
   }
 }

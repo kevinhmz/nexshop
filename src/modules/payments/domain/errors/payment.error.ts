@@ -1,9 +1,14 @@
-export class PaymentError extends Error {
+import {
+  DomainErrorKind,
+  DomainException,
+} from "src/shared/domain/domain.exception";
+
+export class PaymentError extends DomainException {
   constructor(
     message: string,
-    public readonly code?: string,
+    readonly kind: DomainErrorKind, // "PAYMENT_REQUIRED" | "UPSTREAM"
+    code?: string,
   ) {
-    super(message);
-    this.name = "PaymentError";
+    super(message, code);
   }
 }
