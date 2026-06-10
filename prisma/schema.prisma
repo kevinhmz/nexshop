@@ -110,3 +110,23 @@ model OrderItem {
 
   @@map("order_items")
 }
+
+enum IdempotencyStatus {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+model IdempotencyKey {
+  key            String            @id
+  userId         String
+  requestHash    String
+  responseBody   Json?
+  responseStatus Int?
+  status         IdempotencyStatus @default(IN_PROGRESS)
+  createdAt      DateTime          @default(now())
+  expiresAt      DateTime
+
+  @@index([expiresAt]) // para el job de limpieza (TTL 24h)
+  @@map("idempotency_keys")
+}

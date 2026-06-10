@@ -3,8 +3,10 @@ import { ChargePaymentUseCase } from "./application/use-cases";
 import { PAYMENT_GATEWAY } from "./domain/ports";
 import { PaymentsController } from "./infrastructure/controllers/payments.controller";
 import { StripePaymentAdapter } from "./infrastructure/adapters/stripe.payment.adapter";
+import { IdempotencyModule } from "src/shared/idempotency/idempotency.module";
 
 @Module({
+  imports: [IdempotencyModule],
   controllers: [PaymentsController],
   providers: [
     ChargePaymentUseCase,

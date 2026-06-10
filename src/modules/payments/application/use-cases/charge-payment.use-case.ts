@@ -4,14 +4,13 @@ import {
   PaymentGatewayPort,
 } from "@modules/payments/domain/ports/payment-gateway.port";
 import { Inject, Injectable } from "@nestjs/common";
-import { randomUUID } from "crypto";
-
 export interface ChargePaymentInput {
   amount: number;
   currency: string;
   paymentMethodId: string;
   orderId: string;
   userId: string;
+  idempotencyKey: string;
 }
 
 @Injectable()
@@ -27,7 +26,7 @@ export class ChargePaymentUseCase {
       currency: input.currency,
       paymentMethodId: input.paymentMethodId,
       metadata: { orderId: input.orderId, userId: input.userId },
-      idempotencyKey: randomUUID(),
+      idempotencyKey: input.idempotencyKey,
     });
   }
 }
